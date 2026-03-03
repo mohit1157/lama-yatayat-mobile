@@ -1,71 +1,111 @@
-import React from 'react';
-import { SymbolView } from 'expo-symbols';
-import { Link, Tabs } from 'expo-router';
-import { Platform, Pressable } from 'react-native';
+/**
+ * LaMa Yatayat - Tab Layout
+ *
+ * Bottom tab navigator with Home, Rides, and Profile tabs.
+ */
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+import { Tabs } from "expo-router";
+import { Platform, StyleSheet, View, Text } from "react-native";
+import { Colors } from "@/constants/config";
+
+/**
+ * Simple text-based tab icon.
+ * Uses unicode symbols to avoid external icon library dependency.
+ */
+function TabIcon({
+  symbol,
+  color,
+  focused,
+}: {
+  symbol: string;
+  color: string;
+  focused: boolean;
+}) {
+  return (
+    <View style={styles.iconContainer}>
+      <Text style={[styles.icon, { color }]}>{symbol}</Text>
+      {focused && <View style={[styles.dot, { backgroundColor: color }]} />}
+    </View>
+  );
+}
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
-      }}>
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.grayLight,
+        tabBarStyle: {
+          backgroundColor: Colors.white,
+          borderTopColor: Colors.border,
+          borderTopWidth: 1,
+          height: Platform.OS === "ios" ? 88 : 64,
+          paddingTop: 8,
+          paddingBottom: Platform.OS === "ios" ? 28 : 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: "600",
+        },
+        headerStyle: {
+          backgroundColor: Colors.white,
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: Colors.border,
+        },
+        headerTitleStyle: {
+          fontWeight: "700",
+          color: Colors.dark,
+          fontSize: 18,
+        },
+      }}
+    >
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{
-                ios: 'chevron.left.forwardslash.chevron.right',
-                android: 'code',
-                web: 'code',
-              }}
-              tintColor={color}
-              size={28}
-            />
-          ),
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable style={{ marginRight: 15 }}>
-                {({ pressed }) => (
-                  <SymbolView
-                    name={{ ios: 'info.circle', android: 'info', web: 'info' }}
-                    size={25}
-                    tintColor={Colors[colorScheme].text}
-                    style={{ opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
+          title: "Home",
+          headerShown: false,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon symbol={"\u2302"} color={color} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
-        name="two"
+        name="rides"
         options={{
-          title: 'Tab Two',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{
-                ios: 'chevron.left.forwardslash.chevron.right',
-                android: 'code',
-                web: 'code',
-              }}
-              tintColor={color}
-              size={28}
-            />
+          title: "Rides",
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon symbol={"\u2630"} color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon symbol={"\u263A"} color={color} focused={focused} />
           ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  icon: {
+    fontSize: 22,
+    lineHeight: 26,
+  },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    marginTop: 2,
+  },
+});

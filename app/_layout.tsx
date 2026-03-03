@@ -1,57 +1,81 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+/**
+ * LaMa Yatayat - Root Layout
+ *
+ * Hydrates auth state on app start and redirects to the login
+ * screen when the user is not authenticated.
+ */
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { useEffect } from "react";
+import { ActivityIndicator, View, StyleSheet } from "react-native";
+import { Slot, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
+import { useAuthStore } from "@/stores/auth";
+import { Colors } from "@/constants/config";
 
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
-} from 'expo-router';
+} from "expo-router";
 
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
-};
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
+// Prevent the splash screen from auto-hiding before we check auth.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
+  const router = useRouter();
+  const segments = useSegments();
+  const { isAuthenticated, isHydrated, hydrate } = useAuthStore();
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
+  // Hydrate auth state from SecureStore on mount
   useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+    hydrate();
+  }, [hydrate]);
 
+  // Hide splash screen once hydrated
   useEffect(() => {
-    if (loaded) {
+    if (isHydrated) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [isHydrated]);
 
-  if (!loaded) {
-    return null;
+  // Redirect based on auth state once hydrated
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+
+    if (!isAuthenticated && !inAuthGroup) {
+      // Not signed in -> send to login
+      router.replace("/(auth)/login");
+    } else if (isAuthenticated && inAuthGroup) {
+      // Already signed in -> send to home
+      router.replace("/(tabs)/home");
+    }
+  }, [isAuthenticated, isHydrated, segments, router]);
+
+  // Show loading spinner while hydrating
+  if (!isHydrated) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <StatusBar style="dark" />
+      </View>
+    );
   }
 
-  return <RootLayoutNav />;
-}
-
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <>
+      <StatusBar style="dark" />
+      <Slot />
+    </>
   );
 }
+
+const styles = StyleSheet.create({
+  loader: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.white,
+  },
+});
