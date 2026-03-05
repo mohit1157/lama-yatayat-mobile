@@ -69,7 +69,7 @@ export default function HomeScreen() {
         setCheckingActiveRide(true);
         try {
           const ride = await fetchActiveRide();
-          if (ride && !cancelled) {
+          if (ride && ride.id && !cancelled) {
             router.replace("/ride/active");
           }
         } catch {
