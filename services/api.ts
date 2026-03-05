@@ -90,7 +90,7 @@ async function request<T>(
     let detail = "Something went wrong";
     try {
       const err = await res.json();
-      detail = err.detail ?? err.message ?? detail;
+      detail = err.error ?? err.detail ?? err.message ?? detail;
     } catch {
       /* ignore parse errors */
     }
@@ -102,7 +102,14 @@ async function request<T>(
     return undefined as unknown as T;
   }
 
-  return res.json() as Promise<T>;
+  const json = await res.json();
+
+  // Unwrap backend envelope: { success: true, data: T }
+  if (json && typeof json === "object" && "success" in json && "data" in json) {
+    return json.data as T;
+  }
+
+  return json as T;
 }
 
 /* ------------------------------------------------------------------ */
