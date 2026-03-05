@@ -88,6 +88,13 @@ export default function ActiveRideScreen() {
   const { currentLocation } = useLocationStore();
 
   const [initialLoading, setInitialLoading] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
+
+  // Delay map rendering to avoid crash during initial native module init
+  useEffect(() => {
+    const timer = setTimeout(() => setMapReady(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Fetch active ride on mount
   useFocusEffect(
@@ -233,10 +240,10 @@ export default function ActiveRideScreen() {
     <View style={styles.container}>
       {/* Map */}
       <View style={styles.mapContainer}>
-        {MapView ? (
+        {MapView && mapReady ? (
           <MapView
             style={styles.map}
-            region={{
+            initialRegion={{
               ...mapCenter,
               latitudeDelta: 0.02,
               longitudeDelta: 0.02,
@@ -279,15 +286,25 @@ export default function ActiveRideScreen() {
         ) : (
           <View style={[styles.map, styles.mapFallback]}>
             <Text style={styles.mapFallbackText}>Live Tracking</Text>
-            <Text style={styles.mapFallbackSubtext}>
-              {activeRide.pickup_location.address} {"\u2192"}{" "}
-              {activeRide.dropoff_location.address}
-            </Text>
-            {driverCoord && (
-              <Text style={styles.mapFallbackSubtext}>
-                Driver: {driverCoord.latitude.toFixed(4)},{" "}
-                {driverCoord.longitude.toFixed(4)}
-              </Text>
+            {!mapReady ? (
+              <ActivityIndicator
+                size="small"
+                color={Colors.primary}
+                style={{ marginTop: 12 }}
+              />
+            ) : (
+              <>
+                <Text style={styles.mapFallbackSubtext}>
+                  {activeRide.pickup_location.address} {"\u2192"}{" "}
+                  {activeRide.dropoff_location.address}
+                </Text>
+                {driverCoord && (
+                  <Text style={styles.mapFallbackSubtext}>
+                    Driver: {driverCoord.latitude.toFixed(4)},{" "}
+                    {driverCoord.longitude.toFixed(4)}
+                  </Text>
+                )}
+              </>
             )}
           </View>
         )}

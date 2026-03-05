@@ -27,14 +27,11 @@ import { useAuthStore } from "@/stores/auth";
 
 // Conditional MapView import -- falls back to a colored View
 let MapView: React.ComponentType<any> | null = null;
-let Marker: React.ComponentType<any> | null = null;
 try {
   const maps = require("react-native-maps");
   MapView = maps.default;
-  Marker = maps.Marker;
 } catch {
   MapView = null;
-  Marker = null;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -52,13 +49,36 @@ export default function HomeScreen() {
     "round_trip"
   );
   const [checkingActiveRide, setCheckingActiveRide] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
 
   const sheetAnim = useRef(new Animated.Value(BOTTOM_SHEET_HEIGHT)).current;
+  const mapRef = useRef<any>(null);
 
   // Start watching location
   useEffect(() => {
     startWatching();
   }, [startWatching]);
+
+  // Delay map rendering to avoid crash during initial native module init
+  useEffect(() => {
+    const timer = setTimeout(() => setMapReady(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Animate map to user location when it becomes available
+  useEffect(() => {
+    if (currentLocation && mapRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        1000
+      );
+    }
+  }, [currentLocation]);
 
   // Check for active ride on focus
   useFocusEffect(
@@ -137,36 +157,30 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       {/* Map */}
-      {MapView ? (
+      {MapView && mapReady ? (
         <MapView
+          ref={mapRef}
           style={styles.map}
-          region={mapRegion}
+          initialRegion={mapRegion}
           showsUserLocation
-          showsMyLocationButton={false}
-          mapPadding={{ top: 100, bottom: 0, left: 0, right: 0 }}
-        >
-          {currentLocation && Marker && (
-            <Marker
-              coordinate={{
-                latitude: currentLocation.latitude,
-                longitude: currentLocation.longitude,
-              }}
-              title="You are here"
-            >
-              <View style={styles.currentLocationMarker}>
-                <View style={styles.currentLocationDot} />
-              </View>
-            </Marker>
-          )}
-        </MapView>
+          showsMyLocationButton
+        />
       ) : (
         <View style={[styles.map, styles.mapFallback]}>
           <Text style={styles.mapFallbackText}>Map View</Text>
-          <Text style={styles.mapFallbackSubtext}>
-            {currentLocation
-              ? `${currentLocation.latitude.toFixed(4)}, ${currentLocation.longitude.toFixed(4)}`
-              : "Waiting for location..."}
-          </Text>
+          {!mapReady ? (
+            <ActivityIndicator
+              size="small"
+              color={Colors.primary}
+              style={{ marginTop: 12 }}
+            />
+          ) : (
+            <Text style={styles.mapFallbackSubtext}>
+              {currentLocation
+                ? `${currentLocation.latitude.toFixed(4)}, ${currentLocation.longitude.toFixed(4)}`
+                : "Waiting for location..."}
+            </Text>
+          )}
         </View>
       )}
 
@@ -334,24 +348,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.gray,
     marginTop: 8,
-  },
-
-  /* Current location marker */
-  currentLocationMarker: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(37, 99, 235, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  currentLocationDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: Colors.primary,
-    borderWidth: 2,
-    borderColor: Colors.white,
   },
 
   /* Search bar */

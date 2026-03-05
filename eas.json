@@ -16,11 +16,34 @@
         "simulator": true
       }
     },
+    "preview-device": {
+      "distribution": "store",
+      "credentialsSource": "local",
+      "autoIncrement": true,
+      "android": {
+        "buildType": "apk"
+      }
+    },
     "production": {
       "autoIncrement": true
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6760086774",
+        "ascApiKeyPath": "/Users/mjcodes/Downloads/AuthKey_L6SQWF4HM6.p8",
+        "ascApiKeyIssuerId": "c92b360d-6757-48b9-ba9c-341c1f3c1353",
+        "ascApiKeyId": "L6SQWF4HM6"
+      }
+    },
+    "preview-device": {
+      "ios": {
+        "ascAppId": "6760086774",
+        "ascApiKeyPath": "/Users/mjcodes/Downloads/AuthKey_L6SQWF4HM6.p8",
+        "ascApiKeyIssuerId": "c92b360d-6757-48b9-ba9c-341c1f3c1353",
+        "ascApiKeyId": "L6SQWF4HM6"
+      }
+    }
   }
 }
