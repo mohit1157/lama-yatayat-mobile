@@ -14,7 +14,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lamayatayat.rider"
+      "bundleIdentifier": "com.lamayatayat.rider",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "LaMa Yatayat needs your location to show your position on the map and find nearby drivers."
+      }
     },
     "android": {
       "package": "com.lamayatayat.rider",
@@ -24,6 +28,15 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCn3KmJ8KWNTDH8D2NULcuE3-b9ZqELRLs"
+        }
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -39,6 +52,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-location",
       "expo-secure-store",
       "expo-updates"
     ],
