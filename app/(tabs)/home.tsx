@@ -252,14 +252,16 @@ export default function HomeScreen() {
     });
   };
 
-  const mapRegion = currentLocation
+  // Only build map region from real GPS — never default to Kathmandu
+  const hasLocation = !!currentLocation;
+  const mapRegion = hasLocation
     ? {
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
+        latitude: currentLocation!.latitude,
+        longitude: currentLocation!.longitude,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       }
-    : DEFAULT_REGION;
+    : null;
 
   if (checkingActiveRide) {
     return (
@@ -272,8 +274,8 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Map */}
-      {MapView && mapReady ? (
+      {/* Map — only render once we have real GPS location */}
+      {MapView && mapReady && mapRegion ? (
         <MapView
           ref={mapRef}
           style={styles.map}
@@ -283,20 +285,13 @@ export default function HomeScreen() {
         />
       ) : (
         <View style={[styles.map, styles.mapFallback]}>
-          <Text style={styles.mapFallbackText}>Map View</Text>
-          {!mapReady ? (
-            <ActivityIndicator
-              size="small"
-              color={Colors.primary}
-              style={{ marginTop: 12 }}
-            />
-          ) : (
-            <Text style={styles.mapFallbackSubtext}>
-              {currentLocation
-                ? `${currentLocation.latitude.toFixed(4)}, ${currentLocation.longitude.toFixed(4)}`
-                : "Waiting for location..."}
-            </Text>
-          )}
+          <ActivityIndicator
+            size="large"
+            color={Colors.primary}
+          />
+          <Text style={styles.mapFallbackSubtext}>
+            Getting your location...
+          </Text>
         </View>
       )}
 
