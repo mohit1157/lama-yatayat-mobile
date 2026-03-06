@@ -17,6 +17,7 @@ import {
   Animated,
   Keyboard,
   Platform,
+  FlatList,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
@@ -24,6 +25,8 @@ import { Colors, DEFAULT_REGION, PRICING } from "@/constants/config";
 import { useLocationStore } from "@/stores/location";
 import { useRideStore } from "@/stores/ride";
 import { useAuthStore } from "@/stores/auth";
+
+const GOOGLE_PLACES_API_KEY = "AIzaSyCn3KmJ8KWNTDH8D2NULcuE3-b9ZqELRLs";
 
 // Conditional MapView import -- falls back to a colored View
 let MapView: React.ComponentType<any> | null = null;
@@ -36,6 +39,21 @@ try {
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BOTTOM_SHEET_HEIGHT = 340;
+
+interface PlacePrediction {
+  place_id: string;
+  description: string;
+  structured_formatting: {
+    main_text: string;
+    secondary_text: string;
+  };
+}
+
+interface SelectedPlace {
+  name: string;
+  lat: number;
+  lng: number;
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -50,9 +68,13 @@ export default function HomeScreen() {
   );
   const [checkingActiveRide, setCheckingActiveRide] = useState(true);
   const [mapReady, setMapReady] = useState(false);
+  const [searchResults, setSearchResults] = useState<PlacePrediction[]>([]);
+  const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
+  const [searching, setSearching] = useState(false);
 
   const sheetAnim = useRef(new Animated.Value(BOTTOM_SHEET_HEIGHT)).current;
   const mapRef = useRef<any>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Start watching location
   useEffect(() => {
@@ -117,21 +139,115 @@ export default function HomeScreen() {
     }).start();
   }, [showSheet, sheetAnim]);
 
-  const handleSearchSubmit = () => {
-    if (destination.trim()) {
-      Keyboard.dismiss();
+  // Google Places Autocomplete search (debounced)
+  const searchPlaces = useCallback(
+    (query: string) => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+
+      if (query.trim().length < 2) {
+        setSearchResults([]);
+        return;
+      }
+
+      searchTimerRef.current = setTimeout(async () => {
+        setSearching(true);
+        try {
+          const locationBias = currentLocation
+            ? `&location=${currentLocation.latitude},${currentLocation.longitude}&radius=50000`
+            : "&components=country:np";
+
+          const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+            query
+          )}&key=${GOOGLE_PLACES_API_KEY}${locationBias}`;
+
+          const res = await fetch(url);
+          const data = await res.json();
+
+          if (data.status === "OK" && data.predictions) {
+            setSearchResults(data.predictions.slice(0, 5));
+          } else {
+            setSearchResults([]);
+          }
+        } catch {
+          setSearchResults([]);
+        } finally {
+          setSearching(false);
+        }
+      }, 400);
+    },
+    [currentLocation]
+  );
+
+  // Get place details (coordinates) from place_id
+  const selectPlace = async (prediction: PlacePrediction) => {
+    setDestination(prediction.structured_formatting.main_text);
+    setSearchResults([]);
+    Keyboard.dismiss();
+
+    try {
+      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.place_id}&fields=geometry,name&key=${GOOGLE_PLACES_API_KEY}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.status === "OK" && data.result?.geometry?.location) {
+        const { lat, lng } = data.result.geometry.location;
+        setSelectedPlace({
+          name: prediction.structured_formatting.main_text,
+          lat,
+          lng,
+        });
+        setShowSheet(true);
+      } else {
+        // Fallback: use offset from current location
+        const fallbackLat = (currentLocation?.latitude ?? DEFAULT_REGION.latitude) + 0.015;
+        const fallbackLng = (currentLocation?.longitude ?? DEFAULT_REGION.longitude) + 0.01;
+        setSelectedPlace({
+          name: prediction.structured_formatting.main_text,
+          lat: fallbackLat,
+          lng: fallbackLng,
+        });
+        setShowSheet(true);
+      }
+    } catch {
+      // Fallback on error
+      const fallbackLat = (currentLocation?.latitude ?? DEFAULT_REGION.latitude) + 0.015;
+      const fallbackLng = (currentLocation?.longitude ?? DEFAULT_REGION.longitude) + 0.01;
+      setSelectedPlace({
+        name: prediction.structured_formatting.main_text,
+        lat: fallbackLat,
+        lng: fallbackLng,
+      });
       setShowSheet(true);
     }
   };
 
+  const handleSearchSubmit = () => {
+    if (destination.trim()) {
+      Keyboard.dismiss();
+      // If no place selected yet, do a quick search and pick the first result
+      if (!selectedPlace && searchResults.length > 0) {
+        selectPlace(searchResults[0]);
+      } else if (selectedPlace) {
+        setShowSheet(true);
+      }
+    }
+  };
+
   const handleRequestRide = () => {
+    const pickupLat = currentLocation?.latitude ?? DEFAULT_REGION.latitude;
+    const pickupLng = currentLocation?.longitude ?? DEFAULT_REGION.longitude;
+    const dropoffLat = selectedPlace?.lat ?? pickupLat + 0.015;
+    const dropoffLng = selectedPlace?.lng ?? pickupLng + 0.01;
+
     router.push({
       pathname: "/ride/request",
       params: {
-        destination: destination.trim(),
+        destination: selectedPlace?.name ?? destination.trim(),
         rideType,
-        pickupLat: currentLocation?.latitude?.toString() ?? DEFAULT_REGION.latitude.toString(),
-        pickupLng: currentLocation?.longitude?.toString() ?? DEFAULT_REGION.longitude.toString(),
+        pickupLat: pickupLat.toString(),
+        pickupLng: pickupLng.toString(),
+        dropoffLat: dropoffLat.toString(),
+        dropoffLng: dropoffLng.toString(),
       },
     });
   };
@@ -195,16 +311,62 @@ export default function HomeScreen() {
             value={destination}
             onChangeText={(text) => {
               setDestination(text);
-              if (!text.trim()) setShowSheet(false);
+              setSelectedPlace(null);
+              if (!text.trim()) {
+                setShowSheet(false);
+                setSearchResults([]);
+              } else {
+                searchPlaces(text);
+              }
             }}
             onSubmitEditing={handleSearchSubmit}
             returnKeyType="search"
           />
+          {searching && (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          )}
+          {destination.length > 0 && !searching && (
+            <TouchableOpacity
+              onPress={() => {
+                setDestination("");
+                setSelectedPlace(null);
+                setSearchResults([]);
+                setShowSheet(false);
+              }}
+            >
+              <Text style={{ fontSize: 18, color: Colors.grayLight, paddingLeft: 8 }}>✕</Text>
+            </TouchableOpacity>
+          )}
         </View>
+
+        {/* Search results dropdown */}
+        {searchResults.length > 0 && (
+          <View style={styles.searchResults}>
+            {searchResults.map((item) => (
+              <TouchableOpacity
+                key={item.place_id}
+                style={styles.searchResultItem}
+                onPress={() => selectPlace(item)}
+              >
+                <View style={styles.searchResultIcon}>
+                  <Text style={{ fontSize: 16 }}>📍</Text>
+                </View>
+                <View style={styles.searchResultText}>
+                  <Text style={styles.searchResultMain} numberOfLines={1}>
+                    {item.structured_formatting.main_text}
+                  </Text>
+                  <Text style={styles.searchResultSecondary} numberOfLines={1}>
+                    {item.structured_formatting.secondary_text}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Greeting */}
-      {!showSheet && (
+      {!showSheet && searchResults.length === 0 && (
         <View style={styles.greetingCard}>
           <Text style={styles.greetingText}>
             Hello, {user?.name?.split(" ")[0] ?? "Rider"}
@@ -241,7 +403,7 @@ export default function HomeScreen() {
           <View style={styles.locationInfo}>
             <Text style={styles.locationLabel}>Dropoff</Text>
             <Text style={styles.locationAddress} numberOfLines={1}>
-              {destination || "Enter destination"}
+              {selectedPlace?.name ?? destination || "Enter destination"}
             </Text>
           </View>
         </View>
@@ -382,6 +544,47 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: Colors.dark,
+  },
+  searchResults: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    marginTop: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+    overflow: "hidden",
+  },
+  searchResultItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  searchResultIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  searchResultText: {
+    flex: 1,
+  },
+  searchResultMain: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: Colors.dark,
+  },
+  searchResultSecondary: {
+    fontSize: 12,
+    color: Colors.gray,
+    marginTop: 2,
   },
 
   /* Greeting card */

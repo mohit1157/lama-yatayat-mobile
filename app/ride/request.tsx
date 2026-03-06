@@ -42,6 +42,8 @@ export default function RideRequestScreen() {
     rideType: string;
     pickupLat: string;
     pickupLng: string;
+    dropoffLat: string;
+    dropoffLng: string;
   }>();
 
   const { requestRide, isLoading } = useRideStore();
@@ -55,30 +57,26 @@ export default function RideRequestScreen() {
   const pickupLat = parseFloat(params.pickupLat ?? "") || currentLocation?.latitude || DEFAULT_REGION.latitude;
   const pickupLng = parseFloat(params.pickupLng ?? "") || currentLocation?.longitude || DEFAULT_REGION.longitude;
 
-  // Simple offset for destination (in a real app this would use geocoding)
-  const dropoffLat = pickupLat + 0.015;
-  const dropoffLng = pickupLng + 0.01;
+  // Use actual dropoff coordinates from Google Places, or fallback to offset
+  const dropoffLat = parseFloat(params.dropoffLat ?? "") || pickupLat + 0.015;
+  const dropoffLng = parseFloat(params.dropoffLng ?? "") || pickupLng + 0.01;
 
   const fare = rideType === "round_trip" ? PRICING.roundTrip : PRICING.oneWay;
 
   const handleRequest = async () => {
-    const input: RideRequestInput = {
-      pickup_location: {
-        lat: pickupLat,
-        lng: pickupLng,
-        address: "Current Location",
-      },
-      dropoff_location: {
-        lat: dropoffLat,
-        lng: dropoffLng,
-        address: params.destination ?? "Destination",
-      },
-      ride_type: rideType,
-      promo_code: promoCode.trim() || undefined,
+    // Send flat fields matching backend RideRequestInput model
+    const input = {
+      pickup_lat: pickupLat,
+      pickup_lng: pickupLng,
+      pickup_addr: "Current Location",
+      dropoff_lat: dropoffLat,
+      dropoff_lng: dropoffLng,
+      dropoff_addr: params.destination ?? "Destination",
+      is_round_trip: rideType === "round_trip",
     };
 
     try {
-      await requestRide(input);
+      await requestRide(input as any);
       router.replace("/ride/matching");
     } catch (err: unknown) {
       const message =
