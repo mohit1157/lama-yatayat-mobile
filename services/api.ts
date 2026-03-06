@@ -49,7 +49,7 @@ async function request<T>(
   body?: unknown,
   options: RequestOptions = {}
 ): Promise<T> {
-  const token = options.token ?? (await getStoredToken());
+  const token = options.token !== undefined ? options.token : (await getStoredToken());
 
   // Build URL with optional query params
   let url = `${API_URL}${path}`;
