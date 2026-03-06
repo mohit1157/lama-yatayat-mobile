@@ -398,7 +398,7 @@ export default function HomeScreen() {
           <View style={styles.locationInfo}>
             <Text style={styles.locationLabel}>Dropoff</Text>
             <Text style={styles.locationAddress} numberOfLines={1}>
-              {selectedPlace?.name ?? destination || "Enter destination"}
+              {selectedPlace?.name ?? (destination || "Enter destination")}
             </Text>
           </View>
         </View>
