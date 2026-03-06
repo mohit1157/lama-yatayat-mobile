@@ -166,9 +166,11 @@ export default function HomeScreen() {
           if (data.status === "OK" && data.predictions) {
             setSearchResults(data.predictions.slice(0, 5));
           } else {
+            console.warn("Places API response:", data.status, data.error_message);
             setSearchResults([]);
           }
-        } catch {
+        } catch (err) {
+          console.warn("Places API fetch error:", err);
           setSearchResults([]);
         } finally {
           setSearching(false);

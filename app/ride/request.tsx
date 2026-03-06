@@ -76,7 +76,7 @@ export default function RideRequestScreen() {
     };
 
     try {
-      await requestRide(input as any);
+      await requestRide(input);
       router.replace("/ride/matching");
     } catch (err: unknown) {
       const message =

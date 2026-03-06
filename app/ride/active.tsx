@@ -51,7 +51,7 @@ interface StatusStep {
 
 const STATUS_STEPS: StatusStep[] = [
   { key: "driver_en_route", label: "En Route" },
-  { key: "driver_arrived", label: "Arrived" },
+  { key: "pickup_arrived", label: "Arrived" },
   { key: "in_progress", label: "In Progress" },
 ];
 
@@ -221,12 +221,12 @@ export default function ActiveRideScreen() {
   }
 
   const pickupCoord = {
-    latitude: activeRide.pickup_location.lat,
-    longitude: activeRide.pickup_location.lng,
+    latitude: activeRide.pickup_lat,
+    longitude: activeRide.pickup_lng,
   };
   const dropoffCoord = {
-    latitude: activeRide.dropoff_location.lat,
-    longitude: activeRide.dropoff_location.lng,
+    latitude: activeRide.dropoff_lat,
+    longitude: activeRide.dropoff_lng,
   };
   const driverCoord = driverLocation
     ? { latitude: driverLocation.lat, longitude: driverLocation.lng }
@@ -295,8 +295,8 @@ export default function ActiveRideScreen() {
             ) : (
               <>
                 <Text style={styles.mapFallbackSubtext}>
-                  {activeRide.pickup_location.address} {"\u2192"}{" "}
-                  {activeRide.dropoff_location.address}
+                  {activeRide.pickup_addr} {"\u2192"}{" "}
+                  {activeRide.dropoff_addr}
                 </Text>
                 {driverCoord && (
                   <Text style={styles.mapFallbackSubtext}>
@@ -402,14 +402,14 @@ export default function ActiveRideScreen() {
           <View style={styles.rideInfoItem}>
             <Text style={styles.rideInfoLabel}>Fare</Text>
             <Text style={styles.rideInfoValue}>
-              ${activeRide.fare?.toFixed(2) ?? "--"}
+              ${activeRide.fare_amount?.toFixed(2) ?? "--"}
             </Text>
           </View>
           <View style={styles.rideInfoDivider} />
           <View style={styles.rideInfoItem}>
             <Text style={styles.rideInfoLabel}>Type</Text>
             <Text style={styles.rideInfoValue}>
-              {activeRide.ride_type === "round_trip" ? "Round-Trip" : "One-Way"}
+              {activeRide.is_round_trip ? "Round-Trip" : "One-Way"}
             </Text>
           </View>
         </View>

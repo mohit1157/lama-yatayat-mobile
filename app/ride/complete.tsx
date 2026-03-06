@@ -104,7 +104,7 @@ export default function CompleteScreen() {
           <>
             <View style={styles.fareRow}>
               <Text style={styles.fareLabel}>
-                {ride.pickup_location.address}
+                {ride.pickup_addr || "Pickup"}
               </Text>
             </View>
             <View style={styles.fareArrow}>
@@ -112,7 +112,7 @@ export default function CompleteScreen() {
             </View>
             <View style={styles.fareRow}>
               <Text style={styles.fareLabel}>
-                {ride.dropoff_location.address}
+                {ride.dropoff_addr || "Dropoff"}
               </Text>
             </View>
 
@@ -121,34 +121,16 @@ export default function CompleteScreen() {
             <View style={styles.fareDetailRow}>
               <Text style={styles.fareDetailLabel}>Ride Type</Text>
               <Text style={styles.fareDetailValue}>
-                {ride.ride_type === "round_trip" ? "Round-Trip" : "One-Way"}
+                {ride.is_round_trip ? "Round-Trip" : "One-Way"}
               </Text>
             </View>
-
-            {ride.distance !== undefined && (
-              <View style={styles.fareDetailRow}>
-                <Text style={styles.fareDetailLabel}>Distance</Text>
-                <Text style={styles.fareDetailValue}>
-                  {ride.distance.toFixed(1)} km
-                </Text>
-              </View>
-            )}
-
-            {ride.duration !== undefined && (
-              <View style={styles.fareDetailRow}>
-                <Text style={styles.fareDetailLabel}>Duration</Text>
-                <Text style={styles.fareDetailValue}>
-                  {Math.round(ride.duration)} min
-                </Text>
-              </View>
-            )}
 
             <View style={styles.fareTotalDivider} />
 
             <View style={styles.fareTotalRow}>
               <Text style={styles.fareTotalLabel}>Total</Text>
               <Text style={styles.fareTotalValue}>
-                {PRICING.currency}{ride.fare?.toFixed(2) ?? "--"}
+                {PRICING.currency}{ride.fare_amount?.toFixed(2) ?? "--"}
               </Text>
             </View>
           </>

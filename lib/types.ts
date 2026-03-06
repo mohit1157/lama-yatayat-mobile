@@ -59,34 +59,31 @@ export interface DriverLocation {
 
 export type RideStatus =
   | "requested"
+  | "matching"
   | "matched"
   | "driver_en_route"
-  | "driver_arrived"
+  | "pickup_arrived"
   | "in_progress"
   | "completed"
-  | "cancelled";
+  | "cancelled"
+  | "disputed";
 
 export interface RideRequestInput {
-  pickup_location: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-  dropoff_location: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-  ride_type: "one_way" | "round_trip";
-  promo_code?: string;
+  pickup_lat: number;
+  pickup_lng: number;
+  pickup_addr: string;
+  dropoff_lat: number;
+  dropoff_lng: number;
+  dropoff_addr: string;
+  is_round_trip: boolean;
 }
 
 export interface FareEstimate {
   base_fare: number;
-  distance_fare: number;
+  surcharges: number;
+  discounts: number;
   total: number;
-  currency: string;
-  ride_type: "one_way" | "round_trip";
+  is_round_trip: boolean;
 }
 
 export interface Vehicle {
@@ -108,30 +105,22 @@ export interface Driver {
 export interface Ride {
   id: string;
   rider_id: string;
-  driver_id?: string;
+  batch_id?: string;
   driver?: Driver;
   status: RideStatus;
-  pickup_location: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-  dropoff_location: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-  ride_type: "one_way" | "round_trip";
-  fare: number;
-  distance?: number;
-  duration?: number;
-  promo_code?: string;
-  rating?: number;
-  comment?: string;
+  pickup_lat: number;
+  pickup_lng: number;
+  pickup_addr: string;
+  dropoff_lat: number;
+  dropoff_lng: number;
+  dropoff_addr: string;
+  fare_amount: number;
+  is_round_trip: boolean;
   created_at: string;
-  updated_at: string;
+  matched_at?: string;
   started_at?: string;
   completed_at?: string;
+  cancelled_at?: string;
 }
 
 export interface RideRatingInput {

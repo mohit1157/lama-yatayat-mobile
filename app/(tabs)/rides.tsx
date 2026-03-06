@@ -37,12 +37,14 @@ function formatDate(iso: string): string {
 function statusLabel(status: RideStatus): string {
   const map: Record<RideStatus, string> = {
     requested: "Requested",
+    matching: "Finding Driver",
     matched: "Matched",
     driver_en_route: "Driver En Route",
-    driver_arrived: "Driver Arrived",
+    pickup_arrived: "Driver Arrived",
     in_progress: "In Progress",
     completed: "Completed",
     cancelled: "Cancelled",
+    disputed: "Disputed",
   };
   return map[status] ?? status;
 }
@@ -55,8 +57,10 @@ function statusColor(status: RideStatus): string {
       return Colors.danger;
     case "in_progress":
     case "driver_en_route":
-    case "driver_arrived":
+    case "pickup_arrived":
       return Colors.primary;
+    case "matching":
+      return Colors.warning;
     default:
       return Colors.warning;
   }
@@ -91,14 +95,14 @@ function RideItem({ ride }: { ride: Ride }) {
         <View style={styles.routeRow}>
           <View style={[styles.routeDot, { backgroundColor: Colors.success }]} />
           <Text style={styles.routeAddress} numberOfLines={1}>
-            {ride.pickup_location.address}
+            {ride.pickup_addr || "Pickup"}
           </Text>
         </View>
         <View style={styles.routeLine} />
         <View style={styles.routeRow}>
           <View style={[styles.routeDot, { backgroundColor: Colors.primary }]} />
           <Text style={styles.routeAddress} numberOfLines={1}>
-            {ride.dropoff_location.address}
+            {ride.dropoff_addr || "Dropoff"}
           </Text>
         </View>
       </View>
@@ -106,11 +110,11 @@ function RideItem({ ride }: { ride: Ride }) {
       {/* Fare */}
       <View style={styles.fareRow}>
         <Text style={styles.fareLabel}>
-          {ride.ride_type === "round_trip" ? "Round-Trip" : "One-Way"}
+          {ride.is_round_trip ? "Round-Trip" : "One-Way"}
         </Text>
         <Text style={styles.fareAmount}>
           {PRICING.currency}
-          {ride.fare?.toFixed(2) ?? "--"}
+          {ride.fare_amount?.toFixed(2) ?? "--"}
         </Text>
       </View>
     </View>
